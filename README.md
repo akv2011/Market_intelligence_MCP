@@ -1,0 +1,182 @@
+# Market Intelligence AI Backend Service
+
+AI-powered market intelligence backend service with real-time financial data integration and web search capabilities.
+
+## Overview
+
+Backend service providing intelligent market analysis through:
+- MCP (Model Context Protocol) server integration for financial data
+- Google Gemini AI with real-time web search grounding
+- RESTful API endpoints (streaming and non-streaming)
+- Conversational context memory using SQLite
+- Two-stage AI pipeline: ticker extraction and data synthesis
+
+## Features
+
+- MCP Financial Server Integration: Real-time stock prices, crypto data, company news, financial statements
+- HTTP API Endpoints:
+  - POST /query - Non-streaming JSON responses (REQUIRED)
+  - POST /query/stream - Server-Sent Events streaming for real-time chat (BONUS)
+  - GET /health - Health check endpoint
+- Context Memory: SQLite-based conversation history with session management
+- Google Gemini AI: Latest gemini-2.0-flash-001 model with Google Search grounding
+- Two-Stage Intelligence:
+  - Stage 1: Extract ticker symbols and query type
+  - Stage 2: Fetch MCP financial data + Google Search + AI synthesis
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Configure API Keys
+
+```bash
+export GEMINI_API_KEY=your_gemini_api_key_here
+export FINANCIAL_DATASETS_API_KEY=your_financial_api_key_here
+```
+
+Get your Gemini API key from: https://aistudio.google.com/apikey
+
+### 3. Start the Server
+
+```bash
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+## API Testing
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+```
+
+### Non-Streaming Endpoint
+
+```bash
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Give me the latest news on the stock market."}'
+
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is NVIDIA stock price?"}'
+
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is Bitcoin price right now?"}'
+```
+
+### Streaming Endpoint
+
+```bash
+curl -N -X POST http://localhost:8000/query/stream \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is Bitcoin price right now?"}' \
+  --no-buffer
+```
+
+### Context Preservation
+
+```bash
+# First query
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is Tesla stock price?"}'
+
+# Follow-up query (use session_id from response)
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What about their competitors?", "session_id": "SESSION_ID_HERE"}'
+```
+
+## Architecture
+
+### Two-Stage AI Pipeline
+
+Stage 1: Ticker Extraction
+- Gemini extracts ticker symbol and query type using JSON mode
+- Determines if financial data is needed
+
+Stage 2: Data Synthesis
+- Calls MCP financial server for real-time data
+- Enables Google Search grounding for latest context
+- Combines all sources and sends to Gemini for synthesis
+
+### Data Flow
+
+```
+User Query
+    |
+Stage 1: Extract Ticker (Gemini)
+    |
+Stage 2a: Fetch MCP Financial Data
+    |
+Stage 2b: Google Search Grounding
+    |
+Stage 2c: Gemini Synthesis
+    |
+Response with Citations
+```
+
+### Project Structure
+
+```
+Market_intelligence_MCP/
+├── api/
+│   └── main.py              - FastAPI application with endpoints
+├── market_intel_service/
+│   ├── config.py            - Configuration and API keys
+│   ├── llm.py               - Gemini AI client with two-stage pipeline
+│   ├── chat.py              - Query orchestration
+│   └── memory.py            - SQLite conversation storage
+├── mcp-server-main/
+│   ├── server.py            - MCP financial data server
+│   └── pyproject.toml       - MCP server dependencies
+├── docs/
+│   └── DEPLOYMENT.md        - Detailed deployment guide
+├── README.md                - This file
+├── requirements.txt         - Python dependencies
+├── Dockerfile               - Docker configuration for deployment
+└── vercel.json              - Vercel deployment configuration
+```
+
+## Deployment
+
+### Hugging Face Spaces (Recommended)
+
+1. Create Space at https://huggingface.co/spaces
+2. Choose Docker SDK
+3. Add secrets: GEMINI_API_KEY, FINANCIAL_DATASETS_API_KEY
+4. Push code
+5. Access at: https://your-space.hf.space
+
+Detailed deployment guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+
+### Vercel
+
+```bash
+npm i -g vercel
+vercel --prod
+```
+
+Add environment variables in dashboard.
+
+## Requirements
+
+- fastapi==0.115.2
+- uvicorn==0.30.6
+- google-genai==1.42.0
+- pydantic==2.9.2
+- httpx==0.28.1
+- python-multipart
+
+## License
+
+MIT License - Built for Puch.ai Internship Selection Process

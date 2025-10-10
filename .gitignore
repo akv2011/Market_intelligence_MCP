@@ -1,0 +1,58 @@
+
+.env
+*.env
+.env.local
+.env.production
+
+
+.vscode/mcp.json
+
+weather-server-new/
+weekly-weather-mcp/
+financial-datasets-server/
+
+./vscode
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# ngrok
+ngrok.exe
+
+# App data
+market_intel.db
