@@ -2,6 +2,19 @@
 
 AI-powered market intelligence backend service with real-time financial data integration and web search capabilities.
 
+## Live API Deployment
+
+The API is deployed and accessible at:
+
+**Base URL:** https://akv2011-market-intel-api.hf.space
+
+**API Documentation:** https://akv2011-market-intel-api.hf.space/docs
+
+**Endpoints:**
+- GET /health - Health check endpoint
+- POST /query - Non-streaming JSON responses
+- POST /query/stream - Server-Sent Events streaming for real-time responses
+
 ## Overview
 
 Backend service providing intelligent market analysis through:
@@ -49,51 +62,112 @@ Get your Gemini API key from: https://aistudio.google.com/apikey
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
 ```
 
-## API Testing
+## Usage Examples
 
-### Health Check
+### Using the Deployed API
+
+#### Health Check
+
+```bash
+curl https://akv2011-market-intel-api.hf.space/health
+```
+
+Response:
+```json
+{
+  "status": "ok"
+}
+```
+
+#### Non-Streaming Query
+
+Request latest stock market news:
+```bash
+curl -X POST https://akv2011-market-intel-api.hf.space/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Give me the latest news on the stock market."}'
+```
+
+Request stock price:
+```bash
+curl -X POST https://akv2011-market-intel-api.hf.space/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is NVIDIA stock price?"}'
+```
+
+Request cryptocurrency price:
+```bash
+curl -X POST https://akv2011-market-intel-api.hf.space/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is Bitcoin price right now?"}'
+```
+
+Response Format:
+```json
+{
+  "session_id": "61933c11-6c76-4a0e-925f-bd0d16e51e34",
+  "answer": "The NVIDIA Corporation (NVDA) stock price is $183.16 as of October 10, 2025..."
+}
+```
+
+#### Streaming Query
+
+```bash
+curl -N -X POST https://akv2011-market-intel-api.hf.space/query/stream \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Give me the latest stock market news"}' \
+  --no-buffer
+```
+
+Response Format (Server-Sent Events):
+```
+data: Analyzing...
+
+data: Here's the latest stock market news...
+
+event: done
+data: ccb2dea9-fb94-4522-ac78-f835000fb7c5
+```
+
+#### Context Preservation
+
+First query:
+```bash
+curl -X POST https://akv2011-market-intel-api.hf.space/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is Tesla stock price?"}'
+```
+
+Follow-up query using session_id from previous response:
+```bash
+curl -X POST https://akv2011-market-intel-api.hf.space/query \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What about their competitors?", "session_id": "SESSION_ID_FROM_PREVIOUS_RESPONSE"}'
+```
+
+### Testing Locally
+
+#### Health Check
 
 ```bash
 curl http://localhost:8000/health
 ```
 
-### Non-Streaming Endpoint
+#### Non-Streaming Endpoint
 
 ```bash
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
-  -d '{"message": "Give me the latest news on the stock market."}'
-
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
   -d '{"message": "What is NVIDIA stock price?"}'
-
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is Bitcoin price right now?"}'
 ```
 
-### Streaming Endpoint
+#### Streaming Endpoint
 
 ```bash
 curl -N -X POST http://localhost:8000/query/stream \
   -H "Content-Type: application/json" \
   -d '{"message": "What is Bitcoin price right now?"}' \
   --no-buffer
-```
-
-### Context Preservation
-
-```bash
-# First query
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is Tesla stock price?"}'
-
-# Follow-up query (use session_id from response)
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What about their competitors?", "session_id": "SESSION_ID_HERE"}'
 ```
 
 ## Architecture
@@ -147,27 +221,6 @@ Market_intelligence_MCP/
 └── vercel.json              - Vercel deployment configuration
 ```
 
-## Deployment
-
-### Hugging Face Spaces (Recommended)
-
-1. Create Space at https://huggingface.co/spaces
-2. Choose Docker SDK
-3. Add secrets: GEMINI_API_KEY, FINANCIAL_DATASETS_API_KEY
-4. Push code
-5. Access at: https://your-space.hf.space
-
-Detailed deployment guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
-
-### Vercel
-
-```bash
-npm i -g vercel
-vercel --prod
-```
-
-Add environment variables in dashboard.
-
 ## Requirements
 
 - fastapi==0.115.2
@@ -177,6 +230,4 @@ Add environment variables in dashboard.
 - httpx==0.28.1
 - python-multipart
 
-## License
 
-MIT License - Built for Puch.ai Internship Selection Process
