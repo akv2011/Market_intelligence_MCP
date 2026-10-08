@@ -9,7 +9,6 @@ from typing import Optional
 
 from market_intel_service.chat import answer_query, answer_query_stream, ensure_initialized
 
-
 app = FastAPI(title="Market Intelligence API", version="0.1.0")
 
 
@@ -28,6 +27,28 @@ class QueryResponse(BaseModel):
 @app.on_event("startup")
 async def _startup():
     await ensure_initialized()
+
+
+@app.get("/")
+async def root():
+    return {
+        "name": "Market Intelligence API",
+        "version": "0.1.0",
+        "description": "AI-powered market intelligence with MCP architecture",
+        "endpoints": {
+            "health": "/health",
+            "query": "/query",
+            "query_stream": "/query/stream",
+            "docs": "/docs"
+        },
+        "features": [
+            "Real-time stock prices and crypto data",
+            "Financial statements and SEC filings",
+            "Company news and market analysis",
+            "Context-aware conversations",
+            "Google Search grounding"
+        ]
+    }
 
 
 @app.get("/health")
