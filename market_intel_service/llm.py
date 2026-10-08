@@ -28,7 +28,10 @@ class GeminiClient:
             from google.genai import types
             self.genai = genai
             self.types = types
-            self.client = genai.Client(api_key=self.api_key)
+            # free-tier keys often get 503 "high demand", so those are retried with backoff;
+            # 429 is not, because the free tier's limit is per day and a retry only spends more of it
+            retry = types.HttpRetryOptions(attempts=5, initial_delay=1.0, max_delay=16.0, http_status_codes=[408, 500, 502, 503, 504])
+            self.client = genai.Client(api_key=self.api_key, http_options=types.HttpOptions(retry_options=retry))
         except ImportError:
             raise ImportError("google-genai package is required")
     
