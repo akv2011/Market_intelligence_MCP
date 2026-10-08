@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -77,8 +78,9 @@ async def query_stream(req: QueryRequest):
             # Send final event with session_id
             if session_id:
                 yield f"event: done\ndata: {session_id}\n\n"
-        except Exception as e:
-            yield f"event: error\ndata: {str(e)}\n\n"
+        except Exception:
+            logging.getLogger(__name__).exception("stream failed")
+            yield "event: error\ndata: The answer service is unavailable right now.\n\n"
     
     return StreamingResponse(
         event_generator(),

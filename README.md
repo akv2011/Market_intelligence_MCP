@@ -2,19 +2,6 @@
 
 AI-powered market intelligence backend service with real-time financial data integration and web search capabilities.
 
-## Live API Deployment
-
-The API is deployed and accessible at:
-
-**Base URL:** https://akv2011-market-intel-api.hf.space
-
-**API Documentation:** https://akv2011-market-intel-api.hf.space/docs
-
-**Endpoints:**
-- GET /health - Health check endpoint
-- POST /query - Non-streaming JSON responses
-- POST /query/stream - Server-Sent Events streaming for real-time responses
-
 ## Overview
 
 Backend service providing intelligent market analysis through:
@@ -32,7 +19,8 @@ Backend service providing intelligent market analysis through:
   - POST /query/stream - Server-Sent Events streaming for real-time chat
   - GET /health - Health check endpoint
 - Context Memory: SQLite-based conversation history with session management
-- Google Gemini AI: Latest gemini-2.0-flash-001 model with Google Search grounding
+- Google Gemini AI: `gemini-3.8-flash` by default (set `GEMINI_MODEL` to change it) with Google Search grounding
+- Errors: provider and tool failures are logged on the server; callers get a fixed message, because provider error text can quote the API key
 - Two-Stage Intelligence:
   - Stage 1: Extract ticker symbols and query type
   - Stage 2: Fetch MCP financial data + Google Search + AI synthesis
@@ -114,12 +102,10 @@ python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 ## Usage Examples
 
-### Using the Deployed API
-
-#### Health Check
+### Health Check
 
 ```bash
-curl https://akv2011-market-intel-api.hf.space/health
+curl http://localhost:8000/health
 ```
 
 Response:
@@ -129,25 +115,25 @@ Response:
 }
 ```
 
-#### Non-Streaming Query
+### Non-Streaming Query
 
 Request latest stock market news:
 ```bash
-curl -X POST https://akv2011-market-intel-api.hf.space/query \
+curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{"message": "Give me the latest news on the stock market."}'
 ```
 
 Request stock price:
 ```bash
-curl -X POST https://akv2011-market-intel-api.hf.space/query \
+curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{"message": "What is NVIDIA stock price?"}'
 ```
 
 Request cryptocurrency price:
 ```bash
-curl -X POST https://akv2011-market-intel-api.hf.space/query \
+curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{"message": "What is Bitcoin price right now?"}'
 ```
@@ -160,10 +146,10 @@ Response Format:
 }
 ```
 
-#### Streaming Query
+### Streaming Query
 
 ```bash
-curl -N -X POST https://akv2011-market-intel-api.hf.space/query/stream \
+curl -N -X POST http://localhost:8000/query/stream \
   -H "Content-Type: application/json" \
   -d '{"message": "Give me the latest stock market news"}' \
   --no-buffer
@@ -179,45 +165,20 @@ event: done
 data: ccb2dea9-fb94-4522-ac78-f835000fb7c5
 ```
 
-#### Context Preservation
+### Context Preservation
 
 First query:
 ```bash
-curl -X POST https://akv2011-market-intel-api.hf.space/query \
+curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
   -d '{"message": "What is Tesla stock price?"}'
 ```
 
 Follow-up query using session_id from previous response:
 ```bash
-curl -X POST https://akv2011-market-intel-api.hf.space/query \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What about their competitors?", "session_id": "SESSION_ID_FROM_PREVIOUS_RESPONSE"}'
-```
-
-### Testing Locally
-
-#### Health Check
-
-```bash
-curl http://localhost:8000/health
-```
-
-#### Non-Streaming Endpoint
-
-```bash
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
-  -d '{"message": "What is NVIDIA stock price?"}'
-```
-
-#### Streaming Endpoint
-
-```bash
-curl -N -X POST http://localhost:8000/query/stream \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What is Bitcoin price right now?"}' \
-  --no-buffer
+  -d '{"message": "What about their competitors?", "session_id": "SESSION_ID_FROM_PREVIOUS_RESPONSE"}'
 ```
 
 ## Architecture
@@ -263,21 +224,18 @@ Market_intelligence_MCP/
 ├── mcp-server-main/
 │   ├── server.py            - MCP financial data server
 │   └── pyproject.toml       - MCP server dependencies
-├── docs/
-│   └── DEPLOYMENT.md        - Detailed deployment guide
+├── tests/
+│   └── test_errors.py       - provider errors never reach the caller
 ├── README.md                - This file
 ├── requirements.txt         - Python dependencies
-├── Dockerfile               - Docker configuration for deployment
-└── vercel.json              - Vercel deployment configuration
+└── Dockerfile               - Docker configuration for deployment
 ```
 
-## Requirements
+## Tests
 
-- fastapi==0.115.2
-- uvicorn==0.30.6
-- google-genai==1.42.0
-- pydantic==2.9.2
-- httpx==0.28.1
-- python-multipart
+```bash
+pip install pytest
+pytest tests
+```
 
-
+The tests make the Gemini client fail with an error that quotes an API key and check that neither the full answer nor the streamed one passes it on. Running the server with a wrong key and calling both endpoints shows the same fixed message.

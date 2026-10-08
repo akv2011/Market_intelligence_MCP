@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import AsyncIterator, Dict, List, Optional, Any
@@ -10,6 +11,8 @@ from fastmcp import Client
 from .config import settings
 
 MCP_SERVER = Path(__file__).resolve().parent.parent / "mcp-server-main" / "server.py"
+UNAVAILABLE = "The answer service is unavailable right now. Try again later."
+log = logging.getLogger(__name__)
 
 Message = Dict[str, str]
 class GeminiClient:
@@ -74,7 +77,8 @@ Examples:
             if isinstance(parsed, list):
                 parsed = parsed[0] if parsed else {}
             return parsed
-        except Exception as e:
+        except Exception:
+            log.warning("ticker extraction failed", exc_info=True)
             return {"ticker": None, "needs_financial_data": False, "query_type": "general_market"}
     
     async def call_mcp_financial_tool(self, ticker: str, query_type: str) -> str:
@@ -91,8 +95,9 @@ Examples:
             async with Client(MCP_SERVER, timeout=30) as client:
                 result = await client.call_tool(tool_name, {"ticker": ticker}, raise_on_error=False)
             return result.content[0].text if result.content else "No data"
-        except Exception as e:
-            return f"Error: {str(e)}"
+        except Exception:
+            log.exception("market data call failed")
+            return "Market data is unavailable for this question."
     
     async def generate(self, messages: List[Message], model: Optional[str] = None) -> str:
         system_instruction, user_query = self._convert_messages(messages)
@@ -135,8 +140,10 @@ Provide response:"""
                 config=config
             )
             return response.text
-        except Exception as e:
-            return f"Error: {str(e)}"
+        except Exception:
+            # provider errors can quote the API key, so callers only get a fixed message
+            log.exception("Gemini call failed")
+            return UNAVAILABLE
     
     async def generate_stream(self, messages: List[Message], model: Optional[str] = None) -> AsyncIterator[str]:
         system_instruction, user_query = self._convert_messages(messages)
@@ -181,8 +188,9 @@ Provide response:"""
             ):
                 if hasattr(chunk, 'text') and chunk.text:
                     yield chunk.text
-        except Exception as e:
-            yield f"\n\nError: {str(e)}"
+        except Exception:
+            log.exception("Gemini stream failed")
+            yield f"\n\n{UNAVAILABLE}"
 
 
 def make_llm() -> GeminiClient:
