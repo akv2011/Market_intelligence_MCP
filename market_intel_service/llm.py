@@ -12,6 +12,10 @@ from .config import settings
 
 MCP_SERVER = Path(__file__).resolve().parent.parent / "mcp-server-main" / "server.py"
 UNAVAILABLE = "The answer service is unavailable right now. Try again later."
+NO_SEARCH = (
+    "Web search is not available here. Do not call tools or claim to have searched. Answer from the financial "
+    "data provided and your own knowledge, and say how current that knowledge is."
+)
 log = logging.getLogger(__name__)
 
 Message = Dict[str, str]
@@ -113,6 +117,7 @@ Examples:
             query_type = analysis["query_type"]
             financial_data = await self.call_mcp_financial_tool(ticker, query_type)
         
+        search_step = "Use Google Search for latest news/context" if settings.use_google_search else "Web search is off; say if the data may be out of date"
         enhanced_prompt = f"""You are MarketIntel AI assistant.
 
 USER QUERY: {user_query}
@@ -123,18 +128,14 @@ FINANCIAL DATA: {financial_data if financial_data else "No data"}
 
 Instructions:
 1. Use financial data from MCP server if available
-2. Use Google Search for latest news/context
+2. {search_step}
 3. Combine both sources
 4. Cite sources
 5. Be concise
 
 Provide response:"""
 
-        config = {"temperature": 0.3}
-        if system_instruction:
-            config["system_instruction"] = system_instruction
-        if settings.use_google_search:
-            config["tools"] = [{"google_search": {}}]
+        config = _config(system_instruction)
         
         try:
             response = self.client.models.generate_content(
@@ -142,7 +143,11 @@ Provide response:"""
                 contents=enhanced_prompt,
                 config=config
             )
-            return response.text
+            if response.text:
+                return response.text
+            candidate = response.candidates[0] if response.candidates else None
+            log.warning("Gemini returned no text (finish_reason=%s)", candidate.finish_reason if candidate else None)
+            return UNAVAILABLE
         except Exception:
             # provider errors can quote the API key, so callers only get a fixed message
             log.exception("Gemini call failed")
@@ -161,6 +166,7 @@ Provide response:"""
             yield f"Fetching {ticker} data...\n\n"
             financial_data = await self.call_mcp_financial_tool(ticker, query_type)
         
+        search_step = "Use Google Search for latest news/context" if settings.use_google_search else "Web search is off; say if the data may be out of date"
         enhanced_prompt = f"""You are MarketIntel AI assistant.
 
 USER QUERY: {user_query}
@@ -171,18 +177,15 @@ FINANCIAL DATA: {financial_data if financial_data else "No data"}
 
 Instructions:
 1. Use financial data if available
-2. Use Google Search for latest news
+2. {search_step}
 3. Combine sources
 4. Cite sources
 
 Provide response:"""
 
-        config = {"temperature": 0.3}
-        if system_instruction:
-            config["system_instruction"] = system_instruction
-        if settings.use_google_search:
-            config["tools"] = [{"google_search": {}}]
+        config = _config(system_instruction)
         
+        sent = False
         try:
             for chunk in self.client.models.generate_content_stream(
                 model=model or settings.gemini_model,
@@ -190,10 +193,26 @@ Provide response:"""
                 config=config
             ):
                 if hasattr(chunk, 'text') and chunk.text:
+                    sent = True
                     yield chunk.text
+            if not sent:
+                log.warning("Gemini stream returned no text")
+                yield UNAVAILABLE
         except Exception:
             log.exception("Gemini stream failed")
             yield f"\n\n{UNAVAILABLE}"
+
+
+def _config(system_instruction: Optional[str]) -> Dict[str, Any]:
+    config: Dict[str, Any] = {"temperature": 0.3}
+    if settings.use_google_search:
+        config["tools"] = [{"google_search": {}}]
+    else:
+        # told to search with no search tool, Gemini tries a tool call anyway and returns no text
+        system_instruction = f"{system_instruction or ''}\n\n{NO_SEARCH}".strip()
+    if system_instruction:
+        config["system_instruction"] = system_instruction
+    return config
 
 
 def make_llm() -> GeminiClient:
