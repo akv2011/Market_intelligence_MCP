@@ -1,14 +1,13 @@
 {
+  "inputs": [
+    { "type": "promptString", "id": "fd-key", "description": "Financial Datasets API key", "password": true }
+  ],
   "servers": {
     "market-intel": {
       "type": "stdio",
-      "command": "python",
-      "args": ["mcp_market_server.py"],
-      "env": {
-        "LLM_PROVIDER": "openai", 
-        "OPENAI_API_KEY": "your_openai_api_key_here",
-        "LLM_MODEL": "gpt-4o-mini"
-      }
+      "command": "uv",
+      "args": ["--directory", "${workspaceFolder}/mcp-server-main", "run", "server.py"],
+      "env": { "FINANCIAL_DATASETS_API_KEY": "${input:fd-key}" }
     }
   }
 }

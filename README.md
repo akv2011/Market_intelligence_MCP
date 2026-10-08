@@ -28,14 +28,64 @@ Backend service providing intelligent market analysis through:
 
 - MCP Financial Server Integration: Real-time stock prices, crypto data, company news, financial statements
 - HTTP API Endpoints:
-  - POST /query - Non-streaming JSON responses (REQUIRED)
-  - POST /query/stream - Server-Sent Events streaming for real-time chat (BONUS)
+  - POST /query - Non-streaming JSON responses
+  - POST /query/stream - Server-Sent Events streaming for real-time chat
   - GET /health - Health check endpoint
 - Context Memory: SQLite-based conversation history with session management
 - Google Gemini AI: Latest gemini-2.0-flash-001 model with Google Search grounding
 - Two-Stage Intelligence:
   - Stage 1: Extract ticker symbols and query type
   - Stage 2: Fetch MCP financial data + Google Search + AI synthesis
+
+## MCP server
+
+`mcp-server-main/` is an MCP server over the Financial Datasets API, adapted from [financial-datasets/mcp-server](https://github.com/financial-datasets/mcp-server) (MIT, see `mcp-server-main/LICENSE`). It runs on FastMCP 4 and speaks MCP 2026-07-28 over stdio. The backend starts it and calls it through an MCP client for every query that needs market data.
+
+Tools: `get_income_statements`, `get_balance_sheets`, `get_cash_flow_statements`, `get_current_stock_price`, `get_historical_stock_prices`, `get_company_news`, `get_available_crypto_tickers`, `get_crypto_prices`, `get_historical_crypto_prices`, `get_current_crypto_price`, `get_sec_filings`.
+
+It needs a `FINANCIAL_DATASETS_API_KEY` from financialdatasets.ai. Replace `/path/to` below with where you cloned this repo.
+
+Claude Code:
+
+```sh
+claude mcp add market-intel -e FINANCIAL_DATASETS_API_KEY=your_key -- uv --directory /path/to/Market_intelligence_MCP/mcp-server-main run server.py
+```
+
+Codex CLI:
+
+```sh
+codex mcp add market-intel --env FINANCIAL_DATASETS_API_KEY=your_key -- uv --directory /path/to/Market_intelligence_MCP/mcp-server-main run server.py
+```
+
+Gemini CLI (no `--` before the command):
+
+```sh
+gemini mcp add -s user -e FINANCIAL_DATASETS_API_KEY=your_key market-intel uv --directory /path/to/Market_intelligence_MCP/mcp-server-main run server.py
+```
+
+Claude Desktop (`claude_desktop_config.json`) and Cursor (`~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "market-intel": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/Market_intelligence_MCP/mcp-server-main", "run", "server.py"],
+      "env": { "FINANCIAL_DATASETS_API_KEY": "your_key" }
+    }
+  }
+}
+```
+
+VS Code: copy `.vscode/mcp.json.example` to `.vscode/mcp.json`; it asks for the key on first start.
+
+MCP Inspector:
+
+```sh
+npx @modelcontextprotocol/inspector uv --directory /path/to/Market_intelligence_MCP/mcp-server-main run server.py
+```
+
+Checked on 2026-10-08: Claude Code 2.1.294 connects and MCP Inspector lists all 11 tools and runs them; Codex CLI 0.156.1 accepts the config; Gemini CLI 0.63.0 accepts the config.
 
 ## Quick Start
 
