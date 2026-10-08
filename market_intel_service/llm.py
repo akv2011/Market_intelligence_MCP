@@ -142,13 +142,13 @@ Provide response:"""
         system_instruction, user_query = self._convert_messages(messages)
         
         analysis = await self.extract_ticker_with_gemini(user_query)
-        yield f"🔍 Analyzing...\n"
+        yield f"Analyzing...\n"
         
         financial_data = ""
         if analysis.get("needs_financial_data") and analysis.get("ticker"):
             ticker = analysis["ticker"]
             query_type = analysis["query_type"]
-            yield f"📊 Fetching {ticker} data...\n\n"
+            yield f"Fetching {ticker} data...\n\n"
             financial_data = await self.call_mcp_financial_tool(ticker, query_type)
         
         enhanced_prompt = f"""You are MarketIntel AI assistant.
