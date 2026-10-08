@@ -73,7 +73,7 @@ MCP Inspector:
 npx @modelcontextprotocol/inspector uv --directory /path/to/Market_intelligence_MCP/mcp-server-main run server.py
 ```
 
-Checked on 2026-10-08: Claude Code 2.1.294 connects and MCP Inspector lists all 11 tools and runs them; Codex CLI 0.156.1 accepts the config; Gemini CLI 0.63.0 accepts the config.
+Checked on 2026-10-08: Claude Code 2.1.294 connects and MCP Inspector lists all 11 tools and runs them; Codex CLI 0.156.1 accepts the config; Gemini CLI 0.63.0 ran headless and called `get_current_stock_price` (which needs a Financial Datasets key with credits to return a price). Gemini CLI marks servers "Disabled" in a folder it does not trust; trust the folder or pass `--skip-trust`.
 
 ## Quick Start
 
