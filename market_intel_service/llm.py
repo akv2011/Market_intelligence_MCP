@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
+from pathlib import Path
 from typing import AsyncIterator, Dict, List, Optional, Any
 
+from fastmcp import Client
+
 from .config import settings
+
+MCP_SERVER = Path(__file__).resolve().parent.parent / "mcp-server-main" / "server.py"
 
 Message = Dict[str, str]
 class GeminiClient:
@@ -83,26 +87,10 @@ Examples:
             }
             
             tool_name = tool_mapping.get(query_type, "get_current_stock_price")
-            
-            mcp_request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/call",
-                "params": {"name": tool_name, "arguments": {"ticker": ticker}}
-            }
-            
-            result = subprocess.run(
-                ["python", "/home/arun/Desktop/Hack/Market_intelligence_MCP/mcp-server-main/server.py"],
-                input=json.dumps(mcp_request),
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if result.returncode == 0:
-                response = json.loads(result.stdout)
-                return response.get("result", {}).get("content", [{}])[0].get("text", "No data")
-            return f"Error: {result.stderr}"
+
+            async with Client(MCP_SERVER, timeout=30) as client:
+                result = await client.call_tool(tool_name, {"ticker": ticker}, raise_on_error=False)
+            return result.content[0].text if result.content else "No data"
         except Exception as e:
             return f"Error: {str(e)}"
     
